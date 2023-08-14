@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA Stats Predictions</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<h2>Best Players of the Season</h2>
+<select id="seasonSelect">
+    <option value="2020">2020</option>
+    <option value="2019">2019</option>
+    <option value="2018">2018</option>
+</select>
+<button onclick="getBestPlayers()">Get Best Players</button>
+<table id="bestPlayersTable">
+    <thead>
+        <tr>
+            <th>Year-Week</th>
+            <th>Player</th>
+            <th>Productivity</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<h2>Predict Match Outcome</h2>
+<select id="team1Select">
+    <option value="">Select a Team</option>
+</select>
+vs
+<select id="team2Select">
+    <option value="">Select a Team</option>
+</select>
+
+<button onclick="predictOutcome()">Predict Outcome</button>
+<p id="eloPrediction"></p>
+<p id="mlPrediction"></p>
+
+<script>
+    $(document).ready(function() {
+        $.ajax({
+            url: '/teams',
+            method: 'GET',
+            success: function(data) {
+                let teamSelect1 = $('#team1Select');
+                let teamSelect2 = $('#team2Select');
+                data.forEach(team => {
+                    teamSelect1.append(`<option value="${team.team_name}">${team.team_name}</option>`);
+                    teamSelect2.append(`<option value="${team.team_name}">${team.team_name}</option>`);
+
+                });
+            }
+        });
+    });
+
+    function getBestPlayers() {
+        let season = $('#seasonSelect').val();
+        $.get('/best_player/' + season, function(data) {
+            let tbody = $('#bestPlayersTable tbody');
+            tbody.empty();
+            data.forEach(item => {
+                tbody.append(`
+                    <tr>
+                        <td>${item.year_week}</td>
+                        <td>${item.player}</td>
+                        <td>${item.productivity}</td>
+                    </tr>
+                `);
+            });
+        });
+    }
+
+    function predictOutcome() {
+        let team1 = $('#team1Select').val();
+        let team2 = $('#team2Select').val();
+
+        if (team1 === team2) {
+            alert("Please select different teams for Home and Away.");
+            return;
+        }
+        // ELO Prediction
+        $.ajax({
+            url: '/predict_elo',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ team1: team1, team2: team2 }),
+            success: function(data) {
+                $('#eloPrediction').text(`Elo Prediction: ${data.prediction}`);
+            }
+        });
+
+        // ML Prediction
+        $.ajax({
+            url: '/predict_ml',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ home_team: team1, away_team: team2 }),
+            success: function(data) {
+                $('#mlPrediction').text(`ML Prediction: ${data.prediction}`);
+            }
+        });
+    }
+
+</script>
+
+</body>
+</html>
